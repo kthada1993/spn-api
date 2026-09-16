@@ -35,7 +35,15 @@ export async function issueAuthTokens({ subjectId, role }) {
 }
 
 export async function validateRefreshToken(token) {
-  const payload = verifyRefreshToken(token);
+  let payload;
+
+  try {
+    payload = verifyRefreshToken(token);
+  } catch (error) {
+    // Invalid/expired/signature-mismatch refresh tokens should be treated as unauthenticated.
+    return null;
+  }
+
   const tokenHash = sha256(token);
 
   const rows = await query(

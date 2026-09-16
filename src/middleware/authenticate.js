@@ -93,7 +93,14 @@ export async function authenticate(req, res, next) {
       continue;
     }
 
-    const refreshRecord = await validateRefreshToken(refreshCandidate.token);
+    let refreshRecord;
+
+    try {
+      refreshRecord = await validateRefreshToken(refreshCandidate.token);
+    } catch (error) {
+      continue;
+    }
+
     if (!refreshRecord) {
       continue;
     }
