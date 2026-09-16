@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 import { query } from '../database/connection.js';
 import { invalidCredentialsError, unauthorizedError } from '../utils/errors.js';
