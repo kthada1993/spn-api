@@ -1,0 +1,161 @@
+import { Router } from 'express';
+
+import { ok } from '../../utils/api-response.js';
+import { authenticate } from '../../middleware/authenticate.js';
+import { requireUserApproved } from '../../middleware/require-user-approved.js';
+import { requireUserScreeningPassed } from '../../middleware/require-user-screening-passed.js';
+import { requireUserConsentAccepted } from '../../middleware/require-user-consent-accepted.js';
+import { requireUser } from '../../middleware/require-role.js';
+import { getMyAssessment, saveMyAssessment } from '../../controllers/assessment-controller.js';
+import {
+  getCurrentSleepDiarySession,
+  getMySleepDiary,
+  getMySleepDiarySmartGoal,
+  getMySleepDiaryByDay,
+  createMySleepDiaryByDay,
+  updateMySleepDiaryByDay,
+  saveMySleepDiarySmartGoal,
+  getMySleepDiarySummary,
+} from '../../controllers/sleep-diary-controller.js';
+import {
+  getMyProfileBasics,
+  saveMyProfileBasics,
+  getMyScreening,
+  getMyScreeningOptions,
+  getMyConsent,
+  acceptMyConsent,
+  saveMyScreening,
+} from '../../controllers/screening-controller.js';
+import {
+  getMyKnowledgeProgress,
+  saveMyKnowledgeIntroProgress,
+  saveMyKnowledgeLessonVideoProgress,
+  saveMyKnowledgeLessonPdfOpened,
+  submitMyKnowledgeQuiz,
+} from '../../controllers/knowledge-controller.js';
+
+const router = Router();
+
+router.get('/dashboard', authenticate, requireUser, (req, res) => {
+  return ok(res, {
+    id: req.auth.id,
+    role: req.auth.role,
+    code_id: req.auth.codeId,
+    display_name: req.auth.displayName,
+    approval_status: req.auth.approvalStatus,
+    profile_completed: req.auth.profileCompleted,
+    screening_passed: req.auth.screeningPassed,
+    consent_accepted: req.auth.consentAccepted,
+  });
+});
+
+router.get('/profile-basics', authenticate, requireUser, getMyProfileBasics);
+router.post('/profile-basics', authenticate, requireUser, saveMyProfileBasics);
+
+router.get('/screening/options', authenticate, requireUser, requireUserApproved, getMyScreeningOptions);
+router.get('/screening', authenticate, requireUser, requireUserApproved, getMyScreening);
+router.post('/screening', authenticate, requireUser, requireUserApproved, saveMyScreening);
+router.get('/consent', authenticate, requireUser, requireUserApproved, requireUserScreeningPassed, getMyConsent);
+router.post('/consent/accept', authenticate, requireUser, requireUserApproved, requireUserScreeningPassed, acceptMyConsent);
+router.get(
+  '/assessment',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  requireUserConsentAccepted,
+  getMyAssessment
+);
+router.post(
+  '/assessment',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  requireUserConsentAccepted,
+  saveMyAssessment
+);
+router.get(
+  '/sleep-diary/current',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  getCurrentSleepDiarySession
+);
+router.get(
+  '/sleep-diary/summary',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  getMySleepDiarySummary
+);
+router.get(
+  '/sleep-diary',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  getMySleepDiary
+);
+router.get(
+  '/sleep-diary/smart-goal',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  getMySleepDiarySmartGoal
+);
+router.post(
+  '/sleep-diary/smart-goal',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  saveMySleepDiarySmartGoal
+);
+router.get(
+  '/sleep-diary/:day',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  getMySleepDiaryByDay
+);
+router.post(
+  '/sleep-diary/:day',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  createMySleepDiaryByDay
+);
+router.put(
+  '/sleep-diary/:day',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  updateMySleepDiaryByDay
+);
+
+router.get('/knowledge/progress', authenticate, requireUser, requireUserApproved, getMyKnowledgeProgress);
+router.post('/knowledge/intro-progress', authenticate, requireUser, requireUserApproved, saveMyKnowledgeIntroProgress);
+router.post(
+  '/knowledge/lessons/:lessonId/video-progress',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  saveMyKnowledgeLessonVideoProgress
+);
+router.post(
+  '/knowledge/lessons/:lessonId/pdf-opened',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  saveMyKnowledgeLessonPdfOpened
+);
+router.post('/knowledge/quiz-submit', authenticate, requireUser, requireUserApproved, submitMyKnowledgeQuiz);
+
+export default router;
