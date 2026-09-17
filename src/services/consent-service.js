@@ -25,13 +25,16 @@ async function resolveConsentFilePath() {
 
   const candidatePaths = [
     explicitPath,
+    path.resolve(__dirname, '../resources/consent/consent.txt'),
     path.resolve(__dirname, '../../../frontend/public/consent/consent.txt'),
     path.resolve(process.cwd(), '../frontend/public/consent/consent.txt'),
     path.resolve(process.cwd(), 'frontend/public/consent/consent.txt'),
     '/var/www/spn/consent/consent.txt',
   ].filter(Boolean);
 
-  for (const candidate of candidatePaths) {
+  const uniqueCandidatePaths = [...new Set(candidatePaths)];
+
+  for (const candidate of uniqueCandidatePaths) {
     try {
       await fs.access(candidate);
       cachedConsentFilePath = candidate;
@@ -44,7 +47,7 @@ async function resolveConsentFilePath() {
   throw new AppError(
     500,
     'CONSENT_FILE_NOT_FOUND',
-    `Consent file not found. Checked paths: ${candidatePaths.join(', ')}`
+    `Consent file not found. Checked paths: ${uniqueCandidatePaths.join(', ')}`
   );
 }
 
