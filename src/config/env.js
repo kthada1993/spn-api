@@ -63,6 +63,7 @@ export const env = {
   LINE_CALLBACK_URL: process.env.LINE_CALLBACK_URL ?? '',
   FRONTEND_USER_DASHBOARD_URL: process.env.FRONTEND_USER_DASHBOARD_URL ?? 'http://localhost:3030/user/dashboard',
   FRONTEND_USER_LOGIN_URL: process.env.FRONTEND_USER_LOGIN_URL ?? 'http://localhost:3030/user/login',
+  CONSENT_FILE_PATH: process.env.CONSENT_FILE_PATH ?? '',
   DEFAULT_ADMIN_USERNAME: process.env.DEFAULT_ADMIN_USERNAME ?? 'admin',
   DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD ?? '',
   MONITORING_ROUND2_WAIT_DAYS: toNumber(process.env.MONITORING_ROUND2_WAIT_DAYS, 49),

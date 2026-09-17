@@ -2,17 +2,55 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { env } from '../config/env.js';
 import { query } from '../database/connection.js';
 import { AppError } from '../utils/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const consentFilePath = path.resolve(__dirname, '../../../frontend/public/consent/consent.txt');
 
 let cachedConsentText = null;
+let cachedConsentFilePath = null;
+
+async function resolveConsentFilePath() {
+  if (cachedConsentFilePath) {
+    return cachedConsentFilePath;
+  }
+
+  const explicitPath = env.CONSENT_FILE_PATH
+    ? path.isAbsolute(env.CONSENT_FILE_PATH)
+      ? env.CONSENT_FILE_PATH
+      : path.resolve(process.cwd(), env.CONSENT_FILE_PATH)
+    : null;
+
+  const candidatePaths = [
+    explicitPath,
+    path.resolve(__dirname, '../../../frontend/public/consent/consent.txt'),
+    path.resolve(process.cwd(), '../frontend/public/consent/consent.txt'),
+    path.resolve(process.cwd(), 'frontend/public/consent/consent.txt'),
+    '/var/www/spn/consent/consent.txt',
+  ].filter(Boolean);
+
+  for (const candidate of candidatePaths) {
+    try {
+      await fs.access(candidate);
+      cachedConsentFilePath = candidate;
+      return candidate;
+    } catch {
+      // Continue trying other known deployment paths.
+    }
+  }
+
+  throw new AppError(
+    500,
+    'CONSENT_FILE_NOT_FOUND',
+    `Consent file not found. Checked paths: ${candidatePaths.join(', ')}`
+  );
+}
 
 export async function getConsentDocument() {
   if (cachedConsentText == null) {
+    const consentFilePath = await resolveConsentFilePath();
     const fileText = await fs.readFile(consentFilePath, 'utf8');
     cachedConsentText = String(fileText || '').trim();
   }
