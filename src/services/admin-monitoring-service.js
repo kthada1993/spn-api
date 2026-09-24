@@ -1407,10 +1407,11 @@ export async function listMonitoringPsqiRawExport(filters = {}) {
     `
       SELECT
         ${psqiSelectFields()},
-        u.study_group,
+        s.study_group,
         u.approval_status,
         u.created_at AS user_created_at
       ${psqiBaseQuery()}
+      LEFT JOIN user_screenings s ON s.user_id = u.id
       WHERE ${whereParts.join(' AND ')}
       ORDER BY ${sort.sortBy} ${sort.sortOrder}
     `,
@@ -1483,7 +1484,7 @@ export async function listMonitoringSleepDiaryRawExport(filters = {}) {
         u.id AS user_id,
         u.code_id,
         u.display_name,
-        u.study_group,
+        s.study_group,
         u.approval_status,
         ss.start_date AS session_start_date,
         ss.end_date AS session_end_date,
@@ -1522,6 +1523,7 @@ export async function listMonitoringSleepDiaryRawExport(filters = {}) {
         r.created_at,
         r.updated_at
       ${sleepDiaryBaseQuery()}
+      LEFT JOIN user_screenings s ON s.user_id = u.id
       INNER JOIN sleep_diary_records r ON r.session_id = ss.session_id
       WHERE ${whereParts.join(' AND ')}
       ORDER BY ${sort.sortBy} ${sort.sortOrder}, r.day_number ASC
