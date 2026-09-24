@@ -15,7 +15,7 @@ async function loadSchemaFlags() {
           AND (
             (TABLE_NAME = 'users' AND COLUMN_NAME IN ('approval_status'))
             OR
-            (TABLE_NAME = 'user_screenings' AND COLUMN_NAME IN ('first_name', 'last_name', 'screening_result', 'consent_accepted_at'))
+            (TABLE_NAME = 'user_screenings' AND COLUMN_NAME IN ('first_name', 'last_name', 'screening_result', 'consent_accepted_at', 'study_group'))
           )
       `
     )
@@ -40,11 +40,16 @@ async function loadSchemaFlags() {
           (row) => row.TABLE_NAME === 'user_screenings' && row.COLUMN_NAME === 'consent_accepted_at'
         );
 
+        const hasStudyGroup = rows.some(
+          (row) => row.TABLE_NAME === 'user_screenings' && row.COLUMN_NAME === 'study_group'
+        );
+
         return {
           hasApprovalStatus,
           hasNameParts: hasFirstName && hasLastName,
           hasScreeningResult,
           hasConsentAcceptedAt,
+          hasStudyGroup,
         };
       })
       .catch((error) => {
@@ -196,8 +201,16 @@ export async function findPrincipalByRoleAndId(role, id) {
         ${schemaFlags.hasNameParts ? 's.first_name' : 'NULL AS first_name'},
         ${schemaFlags.hasNameParts ? 's.last_name' : 'NULL AS last_name'},
         s.hospital_id,
+        ${schemaFlags.hasStudyGroup ? 's.study_group' : 'NULL AS study_group'},
         ${schemaFlags.hasScreeningResult ? 's.screening_result' : '0 AS screening_result'},
-        ${schemaFlags.hasConsentAcceptedAt ? 's.consent_accepted_at' : 'NULL AS consent_accepted_at'}
+        ${schemaFlags.hasConsentAcceptedAt ? 's.consent_accepted_at' : 'NULL AS consent_accepted_at'},
+        (
+          SELECT ua.total_score
+          FROM user_assessments ua
+          WHERE ua.user_id = u.id AND ua.assessment_round = 1
+          ORDER BY ua.id DESC
+          LIMIT 1
+        ) AS psqi_round1_total_score
       FROM users u
       LEFT JOIN user_screenings s ON s.user_id = u.id
       WHERE u.id = ?
@@ -208,6 +221,11 @@ export async function findPrincipalByRoleAndId(role, id) {
   const user = rows[0];
   if (!user || user.status !== 'ACTIVE') return null;
 
+  const psqiRound1TotalScore =
+    user.psqi_round1_total_score == null || Number.isNaN(Number(user.psqi_round1_total_score))
+      ? null
+      : Number(user.psqi_round1_total_score);
+
   return {
     id: user.id,
     codeId: user.code_id,
@@ -217,8 +235,15 @@ export async function findPrincipalByRoleAndId(role, id) {
     pictureUrl: user.picture_url,
     email: user.email,
     approvalStatus: user.approval_status || 'PENDING',
+    studyGroup:
+      user.study_group == null || Number.isNaN(Number(user.study_group))
+        ? null
+        : Number(user.study_group),
     profileCompleted: Boolean((user.full_name || (user.first_name && user.last_name)) && user.hospital_id),
     screeningPassed: Number(user.screening_result) === 1,
     consentAccepted: Boolean(user.consent_accepted_at),
+    psqiRound1Score: psqiRound1TotalScore,
+    psqiRound1TotalScore,
+    psqiPassed: psqiRound1TotalScore == null ? null : psqiRound1TotalScore > 5,
   };
 }

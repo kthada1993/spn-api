@@ -276,6 +276,20 @@ export async function submitAssessment(userId, answers) {
 
   const score = calculatePSQI(answers);
   const ref = buildReferenceRange();
+  const passed = Number(score.total_score) > 5;
+
+  if (!passed) {
+    return {
+      assessment_saved: false,
+      passed: false,
+      cutoff_score: 5,
+      total_score: score.total_score,
+      interpretation: score.interpretation,
+      assessment_round: timeline.current_round,
+      assessment_date: ref.assessment_date,
+      record: null,
+    };
+  }
 
   const result = await query(
     `
@@ -373,7 +387,11 @@ export async function submitAssessment(userId, answers) {
   const record = rows[0] || null;
 
   return {
+    assessment_saved: true,
+    passed: true,
+    cutoff_score: 5,
     ...record,
     round_label: toRoundLabel(record?.assessment_round),
+    record,
   };
 }

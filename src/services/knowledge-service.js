@@ -1,9 +1,13 @@
+import { env } from '../config/env.js';
 import { query } from '../database/connection.js';
 import { AppError } from '../utils/errors.js';
 
 import { LESSON_KEYS, QUIZ_TYPES } from '../validators/knowledge-validator.js';
 
 const INTRO_UNLOCK_PERCENT = 90;
+const POSTTEST_UNLOCK_DAYS = Number.isFinite(Number(env.KNOWLEDGE_POSTTEST_UNLOCK_DAYS))
+  ? Math.max(1, Number(env.KNOWLEDGE_POSTTEST_UNLOCK_DAYS))
+  : 56;
 
 const LESSON_META = {
   lesson1: {
@@ -115,6 +119,21 @@ function normalizeQuizAttempt(row) {
   };
 }
 
+function addDays(dateValue, days) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return null;
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function toIsoOrNull(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 function evaluateQuizAnswers(answers) {
   const normalizedAnswers = answers || {};
   const missing = QUIZ_QUESTIONS.filter((item) => !normalizedAnswers[String(item.id)]);
@@ -198,6 +217,51 @@ async function getLatestQuizAttemptByType(userId) {
   };
 }
 
+async function getWeek1AssessmentDate(userId) {
+  const rows = await query(
+    `
+      SELECT assessment_date
+      FROM user_assessments
+      WHERE user_id = ? AND assessment_round = 1
+      ORDER BY assessment_date ASC, id ASC
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows[0]?.assessment_date || null;
+}
+
+async function getKnowledgeQuizAccess(userId) {
+  const week1AssessmentDate = await getWeek1AssessmentDate(userId);
+
+  if (!week1AssessmentDate) {
+    return {
+      can_pretest: false,
+      can_posttest: false,
+      posttest_lock_reason: 'ต้องทำการประเมินครั้งที่ 1 (สัปดาห์ที่ 1) ก่อน จึงจะเริ่มทำแบบทดสอบได้',
+      posttest_unlock_at: null,
+      posttest_unlock_days: POSTTEST_UNLOCK_DAYS,
+      week1_assessment_date: null,
+    };
+  }
+
+  const unlockDate = addDays(week1AssessmentDate, POSTTEST_UNLOCK_DAYS);
+  const unlockTime = unlockDate ? unlockDate.getTime() : null;
+  const canPosttest = unlockTime != null && Date.now() >= unlockTime;
+
+  return {
+    can_pretest: true,
+    can_posttest: canPosttest,
+    posttest_lock_reason: canPosttest
+      ? null
+      : `Posttest จะเปิดหลังครบ ${POSTTEST_UNLOCK_DAYS} วันจากสัปดาห์ที่ 1`,
+    posttest_unlock_at: toIsoOrNull(unlockDate),
+    posttest_unlock_days: POSTTEST_UNLOCK_DAYS,
+    week1_assessment_date: toIsoOrNull(week1AssessmentDate),
+  };
+}
+
 async function ensureLessonRow(userId, lessonKey) {
   await query(
     `
@@ -228,7 +292,7 @@ async function getLessonRow(userId, lessonKey) {
   return rows[0] || null;
 }
 
-function toKnowledgePayload(introRow, lessonRows, quiz) {
+function toKnowledgePayload(introRow, lessonRows, quiz, quizAccess) {
   const intro = normalizeIntro(introRow);
   const byKey = new Map(lessonRows.map((row) => [String(row.lesson_key), row]));
 
@@ -245,6 +309,14 @@ function toKnowledgePayload(introRow, lessonRows, quiz) {
         quiz?.PRETEST && quiz?.POSTTEST
           ? Number(quiz.POSTTEST.score || 0) - Number(quiz.PRETEST.score || 0)
           : null,
+    },
+    quiz_access: quizAccess || {
+      can_pretest: true,
+      can_posttest: false,
+      posttest_lock_reason: null,
+      posttest_unlock_at: null,
+      posttest_unlock_days: POSTTEST_UNLOCK_DAYS,
+      week1_assessment_date: null,
     },
     summary: {
       total_lessons: LESSON_KEYS.length,
@@ -270,12 +342,13 @@ async function ensureIntroUnlocked(userId) {
 }
 
 export async function getKnowledgeProgress(userId) {
-  const [introRow, lessonRows, quiz] = await Promise.all([
+  const [introRow, lessonRows, quiz, quizAccess] = await Promise.all([
     getIntroRow(userId),
     getLessonRows(userId),
     getLatestQuizAttemptByType(userId),
+    getKnowledgeQuizAccess(userId),
   ]);
-  return toKnowledgePayload(introRow, lessonRows, quiz);
+  return toKnowledgePayload(introRow, lessonRows, quiz, quizAccess);
 }
 
 export async function saveKnowledgeIntroProgress(userId, input) {
@@ -393,6 +466,29 @@ export async function markKnowledgeLessonPdfOpened(userId, lessonKey) {
 export async function submitKnowledgeQuiz(userId, input) {
   if (!QUIZ_TYPES.includes(input.quiz_type)) {
     throw new AppError(400, 'VALIDATION_ERROR', 'Invalid quiz type');
+  }
+
+  const quizAccess = await getKnowledgeQuizAccess(userId);
+
+  if (input.quiz_type === 'PRETEST' && !quizAccess.can_pretest) {
+    throw new AppError(
+      400,
+      'PRETEST_NOT_AVAILABLE',
+      'ต้องทำการประเมินครั้งที่ 1 (สัปดาห์ที่ 1) ก่อน จึงจะทำ Pretest ได้'
+    );
+  }
+
+  if (input.quiz_type === 'POSTTEST' && !quizAccess.can_posttest) {
+    const unlockAt = quizAccess.posttest_unlock_at
+      ? new Date(quizAccess.posttest_unlock_at).toLocaleDateString('th-TH')
+      : null;
+    throw new AppError(
+      400,
+      'POSTTEST_NOT_AVAILABLE',
+      unlockAt
+        ? `ยังไม่ถึงกำหนดทำ Posttest (ทำได้หลังวันที่ ${unlockAt})`
+        : 'ยังไม่ถึงกำหนดทำ Posttest (ทำได้หลังครบสัปดาห์ที่ 8)'
+    );
   }
 
   const evaluated = evaluateQuizAnswers(input.answers);

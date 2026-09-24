@@ -502,7 +502,7 @@ function psqiSelectFields() {
       ELSE 'DONE_WEEK1'
     END AS status_code,
     CASE
-      WHEN a8.total_score IS NOT NULL AND a1.total_score IS NOT NULL THEN (a8.total_score - a1.total_score)
+      WHEN a8.total_score IS NOT NULL AND a1.total_score IS NOT NULL THEN (CAST(a8.total_score AS SIGNED) - CAST(a1.total_score AS SIGNED))
       ELSE NULL
     END AS change_score
   `;
@@ -1220,6 +1220,9 @@ export async function getMonitoringSleepDiaryDetail(userIdInput) {
             morning_refreshment: Number(record.morning_refreshment),
             shift_sleepiness: Number(record.shift_sleepiness),
             work_stress: Number(record.work_stress),
+            ot_done: Number(record.ot_done || 0),
+            sleep_medication: Number(record.sleep_medication || 0),
+            nap_count: Number(record.nap_count || 0),
             nap: Number(record.nap),
             nap_minutes: Number(record.nap_minutes),
             caffeine_cups: Number(record.caffeine_cups),

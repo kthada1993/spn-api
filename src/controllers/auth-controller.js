@@ -189,9 +189,13 @@ export const me = asyncHandler(async (req, res) => {
     payload.email = req.auth.email;
     payload.line_user_id = req.auth.lineUserId;
     payload.approval_status = req.auth.approvalStatus;
+    payload.study_group = req.auth.studyGroup;
     payload.profile_completed = req.auth.profileCompleted;
     payload.screening_passed = req.auth.screeningPassed;
     payload.consent_accepted = req.auth.consentAccepted;
+    payload.psqi_round1_score = req.auth.psqiRound1Score;
+    payload.psqi_round1_total_score = req.auth.psqiRound1TotalScore;
+    payload.psqi_passed = req.auth.psqiPassed;
   }
 
   return ok(res, payload);

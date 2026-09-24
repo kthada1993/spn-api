@@ -3,7 +3,13 @@ import { Router } from 'express';
 import { ok } from '../../utils/api-response.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireAdmin } from '../../middleware/require-role.js';
-import { listAdminUsers, updateAdminUser } from '../../controllers/admin-users-controller.js';
+import {
+  listAdminUsers,
+  updateAdminUser,
+  listAdminUserMatchingSuggestions,
+  confirmAdminUserMatchingPair,
+  cancelAdminUserMatchingPair,
+} from '../../controllers/admin-users-controller.js';
 import {
   listAdminHospitals,
   createAdminHospital,
@@ -41,6 +47,9 @@ router.get('/dashboard', authenticate, requireAdmin, (req, res) => {
 
 router.get('/users', authenticate, requireAdmin, listAdminUsers);
 router.patch('/users/:userId', authenticate, requireAdmin, updateAdminUser);
+router.get('/users/matching-suggestions', authenticate, requireAdmin, listAdminUserMatchingSuggestions);
+router.post('/users/matching-pairs/confirm', authenticate, requireAdmin, confirmAdminUserMatchingPair);
+router.post('/users/matching-pairs/cancel', authenticate, requireAdmin, cancelAdminUserMatchingPair);
 
 router.get('/settings/hospitals', authenticate, requireAdmin, listAdminHospitals);
 router.post('/settings/hospitals', authenticate, requireAdmin, createAdminHospital);

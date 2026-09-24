@@ -10,13 +10,7 @@ export const getMyAssessment = asyncHandler(async (req, res) => {
 
 export const saveMyAssessment = asyncHandler(async (req, res) => {
   const input = validateAssessmentInput(req.body);
-  const record = await submitAssessment(req.auth.id, input);
+  const result = await submitAssessment(req.auth.id, input);
 
-  return ok(res, {
-    total_score: record.total_score,
-    interpretation: record.interpretation,
-    assessment_round: record.assessment_round,
-    assessment_date: record.assessment_date,
-    record,
-  });
+  return ok(res, result);
 });

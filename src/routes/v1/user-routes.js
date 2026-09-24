@@ -3,8 +3,9 @@ import { Router } from 'express';
 import { ok } from '../../utils/api-response.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireUserApproved } from '../../middleware/require-user-approved.js';
+import { requireUserExperimentalGroup } from '../../middleware/require-user-experimental-group.js';
 import { requireUserScreeningPassed } from '../../middleware/require-user-screening-passed.js';
-import { requireUserConsentAccepted } from '../../middleware/require-user-consent-accepted.js';
+import { requireUserPsqiPassed } from '../../middleware/require-user-psqi-passed.js';
 import { requireUser } from '../../middleware/require-role.js';
 import { getMyAssessment, saveMyAssessment } from '../../controllers/assessment-controller.js';
 import {
@@ -43,9 +44,13 @@ router.get('/dashboard', authenticate, requireUser, (req, res) => {
     code_id: req.auth.codeId,
     display_name: req.auth.displayName,
     approval_status: req.auth.approvalStatus,
+    study_group: req.auth.studyGroup,
     profile_completed: req.auth.profileCompleted,
     screening_passed: req.auth.screeningPassed,
     consent_accepted: req.auth.consentAccepted,
+    psqi_round1_score: req.auth.psqiRound1Score,
+    psqi_round1_total_score: req.auth.psqiRound1TotalScore,
+    psqi_passed: req.auth.psqiPassed,
   });
 });
 
@@ -55,15 +60,30 @@ router.post('/profile-basics', authenticate, requireUser, saveMyProfileBasics);
 router.get('/screening/options', authenticate, requireUser, requireUserApproved, getMyScreeningOptions);
 router.get('/screening', authenticate, requireUser, requireUserApproved, getMyScreening);
 router.post('/screening', authenticate, requireUser, requireUserApproved, saveMyScreening);
-router.get('/consent', authenticate, requireUser, requireUserApproved, requireUserScreeningPassed, getMyConsent);
-router.post('/consent/accept', authenticate, requireUser, requireUserApproved, requireUserScreeningPassed, acceptMyConsent);
+router.get(
+  '/consent',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  requireUserPsqiPassed,
+  getMyConsent
+);
+router.post(
+  '/consent/accept',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserScreeningPassed,
+  requireUserPsqiPassed,
+  acceptMyConsent
+);
 router.get(
   '/assessment',
   authenticate,
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
-  requireUserConsentAccepted,
   getMyAssessment
 );
 router.post(
@@ -72,7 +92,6 @@ router.post(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
-  requireUserConsentAccepted,
   saveMyAssessment
 );
 router.get(
@@ -81,6 +100,7 @@ router.get(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   getCurrentSleepDiarySession
 );
 router.get(
@@ -89,6 +109,7 @@ router.get(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   getMySleepDiarySummary
 );
 router.get(
@@ -97,6 +118,7 @@ router.get(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   getMySleepDiary
 );
 router.get(
@@ -105,6 +127,7 @@ router.get(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   getMySleepDiarySmartGoal
 );
 router.post(
@@ -113,6 +136,7 @@ router.post(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   saveMySleepDiarySmartGoal
 );
 router.get(
@@ -121,6 +145,7 @@ router.get(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   getMySleepDiaryByDay
 );
 router.post(
@@ -129,6 +154,7 @@ router.post(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   createMySleepDiaryByDay
 );
 router.put(
@@ -137,16 +163,32 @@ router.put(
   requireUser,
   requireUserApproved,
   requireUserScreeningPassed,
+  requireUserPsqiPassed,
   updateMySleepDiaryByDay
 );
 
-router.get('/knowledge/progress', authenticate, requireUser, requireUserApproved, getMyKnowledgeProgress);
-router.post('/knowledge/intro-progress', authenticate, requireUser, requireUserApproved, saveMyKnowledgeIntroProgress);
+router.get(
+  '/knowledge/progress',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserExperimentalGroup,
+  getMyKnowledgeProgress
+);
+router.post(
+  '/knowledge/intro-progress',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserExperimentalGroup,
+  saveMyKnowledgeIntroProgress
+);
 router.post(
   '/knowledge/lessons/:lessonId/video-progress',
   authenticate,
   requireUser,
   requireUserApproved,
+  requireUserExperimentalGroup,
   saveMyKnowledgeLessonVideoProgress
 );
 router.post(
@@ -154,8 +196,16 @@ router.post(
   authenticate,
   requireUser,
   requireUserApproved,
+  requireUserExperimentalGroup,
   saveMyKnowledgeLessonPdfOpened
 );
-router.post('/knowledge/quiz-submit', authenticate, requireUser, requireUserApproved, submitMyKnowledgeQuiz);
+router.post(
+  '/knowledge/quiz-submit',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserExperimentalGroup,
+  submitMyKnowledgeQuiz
+);
 
 export default router;

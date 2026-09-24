@@ -37,8 +37,7 @@ function minutesDiffCrossMidnight(start, end) {
 
 function calculateSleepMetrics(input) {
   const tibMinutes = minutesDiffCrossMidnight(input.bedtime, input.get_up_time);
-  const tstRaw =
-    tibMinutes - input.sol_minutes - input.waso_minutes - input.sleep_after_final_wake_minutes;
+  const tstRaw = tibMinutes - input.sol_minutes - input.waso_minutes;
   const tstMinutes = Math.max(0, tstRaw);
   const sleepEfficiency = tibMinutes > 0 ? Number(((tstMinutes / tibMinutes) * 100).toFixed(2)) : null;
 
@@ -529,6 +528,9 @@ export async function createDiaryRecordByDay(userId, dayNumber, input) {
         morning_refreshment,
         shift_sleepiness,
         work_stress,
+        ot_done,
+        sleep_medication,
+        nap_count,
         nap,
         nap_minutes,
         caffeine_cups,
@@ -538,7 +540,7 @@ export async function createDiaryRecordByDay(userId, dayNumber, input) {
         last_caffeine_time,
         bedroom_adjustment_done
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       session.id,
@@ -563,6 +565,9 @@ export async function createDiaryRecordByDay(userId, dayNumber, input) {
       input.morning_refreshment,
       input.shift_sleepiness,
       input.work_stress,
+      input.ot_done,
+      input.sleep_medication,
+      input.nap_count,
       input.nap,
       input.nap_minutes,
       input.caffeine_cups,
@@ -635,6 +640,9 @@ export async function updateDiaryRecordByDay(userId, dayNumber, input) {
         morning_refreshment = ?,
         shift_sleepiness = ?,
         work_stress = ?,
+        ot_done = ?,
+        sleep_medication = ?,
+        nap_count = ?,
         nap = ?,
         nap_minutes = ?,
         caffeine_cups = ?,
@@ -666,6 +674,9 @@ export async function updateDiaryRecordByDay(userId, dayNumber, input) {
       input.morning_refreshment,
       input.shift_sleepiness,
       input.work_stress,
+      input.ot_done,
+      input.sleep_medication,
+      input.nap_count,
       input.nap,
       input.nap_minutes,
       input.caffeine_cups,
