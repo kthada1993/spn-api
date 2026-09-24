@@ -32,6 +32,8 @@ import {
   getAdminMonitoringLearningDetail,
   getAdminMonitoringParticipantOverview,
   listAdminMonitoringActionRequired,
+  exportAdminMonitoringPsqiRawExcel,
+  exportAdminMonitoringSleepDiaryRawExcel,
 } from '../../controllers/admin-monitoring-controller.js';
 
 const router = Router();
@@ -63,8 +65,10 @@ router.delete('/settings/departments/:id', authenticate, requireAdmin, deleteAdm
 
 router.get('/monitoring/overview', authenticate, requireAdmin, getAdminMonitoringOverview);
 router.get('/monitoring/psqi', authenticate, requireAdmin, listAdminMonitoringPsqi);
+router.get('/monitoring/psqi/export-raw-excel', authenticate, requireAdmin, exportAdminMonitoringPsqiRawExcel);
 router.get('/monitoring/psqi/:userId', authenticate, requireAdmin, getAdminMonitoringPsqiDetail);
 router.get('/monitoring/sleep-diary', authenticate, requireAdmin, listAdminMonitoringSleepDiary);
+router.get('/monitoring/sleep-diary/export-raw-excel', authenticate, requireAdmin, exportAdminMonitoringSleepDiaryRawExcel);
 router.get('/monitoring/sleep-diary/:userId', authenticate, requireAdmin, getAdminMonitoringSleepDiaryDetail);
 router.get('/monitoring/smart-goal', authenticate, requireAdmin, listAdminMonitoringSmartGoal);
 router.get('/monitoring/smart-goal/:userId', authenticate, requireAdmin, getAdminMonitoringSmartGoalDetail);

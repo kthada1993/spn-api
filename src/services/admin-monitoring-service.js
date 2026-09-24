@@ -1072,7 +1072,7 @@ export async function listMonitoringSleepDiary(filters = {}) {
   const sort = normalizeSort(filters, {
     participant_id: 'u.code_id',
     name: 'u.display_name',
-    progress: 'completed_days',
+    progress: 'd.completed_days',
     avg_se: 'd.avg_se',
     avg_tst: 'd.avg_tst_minutes',
     created_at: 'u.created_at',
@@ -1301,6 +1301,283 @@ export async function getMonitoringSleepDiaryDetail(userIdInput) {
       },
     },
     smart_goal: summarizeSmartGoal(records, smartGoal),
+  };
+}
+
+const PSQI_RAW_EXPORT_COLUMNS = [
+  { key: 'user_id', label: 'รหัสผู้ใช้ในระบบ', description: 'Primary key ของผู้ใช้ในตาราง users', value_mapping: '' },
+  { key: 'code_id', label: 'รหัสผู้เข้าร่วม', description: 'รหัสผู้เข้าร่วมที่ใช้ในงานวิจัย', value_mapping: '' },
+  { key: 'display_name', label: 'ชื่อแสดงผล', description: 'ชื่อผู้เข้าร่วมในระบบ', value_mapping: '' },
+  { key: 'study_group', label: 'กลุ่มการศึกษา', description: 'กลุ่มวิจัยของผู้เข้าร่วม', value_mapping: '1=นำร่อง, 2=ทดลอง, 3=ควบคุม' },
+  { key: 'approval_status', label: 'สถานะอนุมัติ', description: 'สถานะการอนุมัติผู้ใช้', value_mapping: 'PENDING, APPROVED, REJECTED' },
+  { key: 'week1_date', label: 'วันที่ประเมิน Week 1', description: 'วันที่ทำแบบประเมิน PSQI รอบที่ 1', value_mapping: 'YYYY-MM-DD' },
+  { key: 'week1_score', label: 'คะแนนรวม PSQI Week 1', description: 'คะแนนรวม Thai-PSQI รอบที่ 1', value_mapping: '0-21' },
+  { key: 'week1_component_1', label: 'W1 C1', description: 'องค์ประกอบที่ 1: คุณภาพการนอนเชิงอัตวิสัย (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_2', label: 'W1 C2', description: 'องค์ประกอบที่ 2: ระยะเวลาตั้งแต่เข้านอนจนหลับ (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_3', label: 'W1 C3', description: 'องค์ประกอบที่ 3: ระยะเวลาการนอน (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_4', label: 'W1 C4', description: 'องค์ประกอบที่ 4: ประสิทธิภาพการนอน (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_5', label: 'W1 C5', description: 'องค์ประกอบที่ 5: รบกวนการนอน (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_6', label: 'W1 C6', description: 'องค์ประกอบที่ 6: การใช้ยานอนหลับ (Week 1)', value_mapping: '0-3' },
+  { key: 'week1_component_7', label: 'W1 C7', description: 'องค์ประกอบที่ 7: ผลกระทบต่อกิจกรรมกลางวัน (Week 1)', value_mapping: '0-3' },
+  { key: 'week8_date', label: 'วันที่ประเมิน Week 8', description: 'วันที่ทำแบบประเมิน PSQI รอบที่ 2', value_mapping: 'YYYY-MM-DD' },
+  { key: 'week8_score', label: 'คะแนนรวม PSQI Week 8', description: 'คะแนนรวม Thai-PSQI รอบที่ 2', value_mapping: '0-21' },
+  { key: 'week8_component_1', label: 'W8 C1', description: 'องค์ประกอบที่ 1: คุณภาพการนอนเชิงอัตวิสัย (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_2', label: 'W8 C2', description: 'องค์ประกอบที่ 2: ระยะเวลาตั้งแต่เข้านอนจนหลับ (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_3', label: 'W8 C3', description: 'องค์ประกอบที่ 3: ระยะเวลาการนอน (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_4', label: 'W8 C4', description: 'องค์ประกอบที่ 4: ประสิทธิภาพการนอน (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_5', label: 'W8 C5', description: 'องค์ประกอบที่ 5: รบกวนการนอน (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_6', label: 'W8 C6', description: 'องค์ประกอบที่ 6: การใช้ยานอนหลับ (Week 8)', value_mapping: '0-3' },
+  { key: 'week8_component_7', label: 'W8 C7', description: 'องค์ประกอบที่ 7: ผลกระทบต่อกิจกรรมกลางวัน (Week 8)', value_mapping: '0-3' },
+  { key: 'latest_psqi', label: 'คะแนน PSQI ล่าสุด', description: 'คะแนนล่าสุดที่มีข้อมูล (Week 8 ถ้ามี มิฉะนั้น Week 1)', value_mapping: '0-21' },
+  { key: 'latest_level_code', label: 'รหัสระดับ PSQI ล่าสุด', description: 'รหัสระดับความรุนแรงจากคะแนนล่าสุด', value_mapping: 'GOOD, PROBLEM, SEVERE, UNKNOWN' },
+  { key: 'latest_level_label', label: 'ระดับ PSQI ล่าสุด', description: 'คำอธิบายระดับจากคะแนนล่าสุด', value_mapping: 'ดี, มีปัญหา, แย่มาก, -' },
+  { key: 'status_code', label: 'รหัสสถานะการประเมิน', description: 'สถานะการทำแบบประเมิน Thai-PSQI', value_mapping: 'NOT_STARTED, DONE_WEEK1, WAITING_WEEK8, COMPLETED' },
+  { key: 'status_label', label: 'สถานะการประเมิน', description: 'คำอธิบายสถานะการทำแบบประเมิน', value_mapping: 'ยังไม่ทำ, ทำแล้ว, รอ Week 8, Completed' },
+  { key: 'change_score', label: 'การเปลี่ยนแปลงคะแนน', description: 'Week 8 - Week 1 (ค่าลบ = ดีขึ้น)', value_mapping: '' },
+  { key: 'change_text', label: 'แนวโน้ม', description: 'ผลการเปลี่ยนแปลงโดยรวมของคะแนน', value_mapping: 'ดีขึ้น, แย่ลง, ไม่เปลี่ยนแปลง, -' },
+  { key: 'user_created_at', label: 'วันที่สร้างผู้ใช้', description: 'วันที่สร้างบัญชีผู้ใช้', value_mapping: 'Datetime' },
+];
+
+const SLEEP_DIARY_RAW_EXPORT_COLUMNS = [
+  { key: 'record_id', label: 'รหัสบันทึกรายวัน', description: 'Primary key ของ sleep_diary_records', value_mapping: '' },
+  { key: 'session_id', label: 'รหัสรอบบันทึก', description: 'Primary key ของ sleep_diary_sessions', value_mapping: '' },
+  { key: 'user_id', label: 'รหัสผู้ใช้ในระบบ', description: 'Primary key ของผู้ใช้ในตาราง users', value_mapping: '' },
+  { key: 'code_id', label: 'รหัสผู้เข้าร่วม', description: 'รหัสผู้เข้าร่วมที่ใช้ในงานวิจัย', value_mapping: '' },
+  { key: 'display_name', label: 'ชื่อแสดงผล', description: 'ชื่อผู้เข้าร่วมในระบบ', value_mapping: '' },
+  { key: 'study_group', label: 'กลุ่มการศึกษา', description: 'กลุ่มวิจัยของผู้เข้าร่วม', value_mapping: '1=นำร่อง, 2=ทดลอง, 3=ควบคุม' },
+  { key: 'approval_status', label: 'สถานะอนุมัติ', description: 'สถานะการอนุมัติผู้ใช้', value_mapping: 'PENDING, APPROVED, REJECTED' },
+  { key: 'session_start_date', label: 'วันเริ่มรอบบันทึก', description: 'วันที่เริ่มต้นรอบบันทึก 14 วัน', value_mapping: 'YYYY-MM-DD' },
+  { key: 'session_end_date', label: 'วันสิ้นสุดรอบบันทึก', description: 'วันที่สิ้นสุดรอบบันทึก 14 วัน', value_mapping: 'YYYY-MM-DD' },
+  { key: 'session_total_days', label: 'จำนวนวันทั้งหมดในรอบ', description: 'จำนวนวันเป้าหมายของรอบบันทึก', value_mapping: 'ปกติ=14' },
+  { key: 'day_number', label: 'วันที่เท่าไรของรอบ', description: 'ลำดับวันในรอบบันทึก', value_mapping: '1-14' },
+  { key: 'week_number', label: 'สัปดาห์ที่', description: 'สัปดาห์ในรอบบันทึก', value_mapping: '1 หรือ 2' },
+  { key: 'wake_date', label: 'วันที่ตื่นนอน', description: 'วันที่ตื่นนอนของรายการนั้น', value_mapping: 'YYYY-MM-DD' },
+  { key: 'shift_type', label: 'ประเภทกะ', description: 'ประเภทกะการทำงานของวันนั้น', value_mapping: 'MORNING, AFTERNOON, NIGHT, OFF' },
+  { key: 'bedtime', label: 'เวลาเข้านอน', description: 'เวลาขึ้นเตียงเข้านอน', value_mapping: 'HH:mm' },
+  { key: 'attempt_sleep_time', label: 'เวลาเริ่มพยายามหลับ', description: 'เวลาเริ่มพยายามนอนหลับ', value_mapping: 'HH:mm' },
+  { key: 'sol_minutes', label: 'SOL นาที', description: 'Sleep Onset Latency: นาทีที่ใช้จนหลับ', value_mapping: 'นาที' },
+  { key: 'number_of_awakenings', label: 'จำนวนครั้งตื่นกลางดึก', description: 'จำนวนครั้งที่ตื่นระหว่างคืน', value_mapping: 'ครั้ง' },
+  { key: 'waso_minutes', label: 'WASO นาที', description: 'Wake After Sleep Onset: นาทีที่ตื่นหลังหลับไปแล้ว', value_mapping: 'นาที' },
+  { key: 'final_wake_time', label: 'เวลาตื่นครั้งสุดท้าย', description: 'เวลาตื่นนอนครั้งสุดท้าย', value_mapping: 'HH:mm' },
+  { key: 'get_up_time', label: 'เวลาลุกจากเตียง', description: 'เวลาที่ลุกจากเตียงจริง', value_mapping: 'HH:mm' },
+  { key: 'sleep_after_final_wake_minutes', label: 'นอนต่อหลังตื่นครั้งสุดท้าย', description: 'นาทีที่นอนต่อหลังตื่นนอนครั้งสุดท้าย', value_mapping: 'นาที' },
+  { key: 'early_wake', label: 'ตื่นเช้าเกินไป', description: 'มีอาการตื่นเช้าเกินไปหรือไม่', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'tib_minutes', label: 'TIB นาที', description: 'Time In Bed', value_mapping: 'นาที' },
+  { key: 'tst_minutes', label: 'TST นาที', description: 'Total Sleep Time', value_mapping: 'นาที' },
+  { key: 'sleep_efficiency', label: 'Sleep Efficiency', description: 'ประสิทธิภาพการนอน', value_mapping: 'เปอร์เซ็นต์' },
+  { key: 'sleep_quality', label: 'คุณภาพการนอนเชิงอัตวิสัย', description: 'คะแนนคุณภาพการนอน', value_mapping: '1-5' },
+  { key: 'morning_refreshment', label: 'ความสดชื่นหลังตื่น', description: 'คะแนนความสดชื่นตอนเช้า', value_mapping: '1-5' },
+  { key: 'shift_sleepiness', label: 'ความง่วงในกะ', description: 'คะแนนความง่วงในกะทำงาน', value_mapping: '1-5' },
+  { key: 'nap_count', label: 'จำนวนครั้งงีบ', description: 'จำนวนครั้งงีบระหว่างกะ', value_mapping: 'จำนวนเต็ม >=0' },
+  { key: 'nap', label: 'มีการงีบหรือไม่', description: 'ตัวแปร yes/no ของการงีบ', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'nap_minutes', label: 'เวลางีบรวม', description: 'เวลางีบรวมต่อวัน', value_mapping: 'นาที' },
+  { key: 'ot_done', label: 'ทำ OT', description: 'มีการทำ OT หรือไม่', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'work_stress', label: 'ความเครียดในการทำงาน', description: 'ระดับความเครียดจากการทำงาน', value_mapping: '1-4' },
+  { key: 'caffeine_cups', label: 'คาเฟอีน (แก้ว/วัน)', description: 'จำนวนแก้วคาเฟอีนต่อวัน', value_mapping: 'จำนวนเต็ม >=0' },
+  { key: 'last_caffeine_time', label: 'เวลาได้รับคาเฟอีนครั้งสุดท้าย', description: 'เวลาที่ดื่มคาเฟอีนครั้งสุดท้าย', value_mapping: 'HH:mm' },
+  { key: 'sleep_medication', label: 'ใช้ยานอนหลับ', description: 'มีการใช้ยานอนหลับหรือไม่', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'phone_before_bed_minutes', label: 'ใช้มือถือก่อนนอน', description: 'เวลาที่ใช้มือถือก่อนนอน', value_mapping: 'นาที' },
+  { key: 'breathing_478', label: 'ทำแบบฝึกหายใจ 4-7-8', description: 'มีการฝึกหายใจ 4-7-8 หรือไม่', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'breathing_478_time', label: 'เวลาฝึกหายใจ 4-7-8', description: 'เวลาเริ่มฝึกหายใจ 4-7-8', value_mapping: 'HH:mm' },
+  { key: 'bedroom_adjustment_done', label: 'ปรับห้องนอนตามแผน', description: 'ทำการปรับห้องนอนตามแผนที่ตั้งไว้หรือไม่', value_mapping: '0=ไม่, 1=ใช่' },
+  { key: 'created_at', label: 'เวลาสร้างรายการ', description: 'เวลาที่สร้างข้อมูลรายวัน', value_mapping: 'Datetime' },
+  { key: 'updated_at', label: 'เวลาแก้ไขล่าสุด', description: 'เวลาที่แก้ไขข้อมูลรายวันล่าสุด', value_mapping: 'Datetime' },
+];
+
+function toTimeHHmm(value) {
+  if (!value) return null;
+  return String(value).slice(0, 5);
+}
+
+export async function listMonitoringPsqiRawExport(filters = {}) {
+  const sort = normalizeSort(filters, {
+    participant_id: 'u.code_id',
+    name: 'u.display_name',
+    week1_score: 'a1.total_score',
+    week8_score: 'a8.total_score',
+    latest_psqi: 'latest_psqi',
+    created_at: 'u.created_at',
+  });
+
+  const params = [];
+  const whereParts = ['1=1'];
+  appendPsqiFilters(whereParts, params, filters);
+
+  const rows = await query(
+    `
+      SELECT
+        ${psqiSelectFields()},
+        u.study_group,
+        u.approval_status,
+        u.created_at AS user_created_at
+      ${psqiBaseQuery()}
+      WHERE ${whereParts.join(' AND ')}
+      ORDER BY ${sort.sortBy} ${sort.sortOrder}
+    `,
+    params
+  );
+
+  const items = rows.map((row) => {
+    const transformed = transformPsqiRow(row);
+
+    return {
+      user_id: transformed.user_id,
+      code_id: transformed.code_id,
+      display_name: transformed.display_name,
+      study_group: row.study_group == null ? null : Number(row.study_group),
+      approval_status: row.approval_status || null,
+      week1_date: transformed.week1_date,
+      week1_score: transformed.week1_score,
+      week1_component_1: transformed.week1_components.c1,
+      week1_component_2: transformed.week1_components.c2,
+      week1_component_3: transformed.week1_components.c3,
+      week1_component_4: transformed.week1_components.c4,
+      week1_component_5: transformed.week1_components.c5,
+      week1_component_6: transformed.week1_components.c6,
+      week1_component_7: transformed.week1_components.c7,
+      week8_date: transformed.week8_date,
+      week8_score: transformed.week8_score,
+      week8_component_1: transformed.week8_components.c1,
+      week8_component_2: transformed.week8_components.c2,
+      week8_component_3: transformed.week8_components.c3,
+      week8_component_4: transformed.week8_components.c4,
+      week8_component_5: transformed.week8_components.c5,
+      week8_component_6: transformed.week8_components.c6,
+      week8_component_7: transformed.week8_components.c7,
+      latest_psqi: transformed.latest_psqi,
+      latest_level_code: transformed.latest_level_code,
+      latest_level_label: transformed.latest_level_label,
+      status_code: transformed.status_code,
+      status_label: transformed.status_label,
+      change_score: transformed.change_score,
+      change_text: transformed.change_text,
+      user_created_at: row.user_created_at || null,
+    };
+  });
+
+  return {
+    items,
+    columns: PSQI_RAW_EXPORT_COLUMNS,
+  };
+}
+
+export async function listMonitoringSleepDiaryRawExport(filters = {}) {
+  const sort = normalizeSort(filters, {
+    participant_id: 'u.code_id',
+    name: 'u.display_name',
+    progress: 'completed_days',
+    avg_se: 'd.avg_se',
+    avg_tst: 'd.avg_tst_minutes',
+    created_at: 'u.created_at',
+  });
+
+  const params = [];
+  const whereParts = ['1=1'];
+  appendSleepDiaryFilters(whereParts, params, filters);
+
+  const rows = await query(
+    `
+      SELECT
+        r.id AS record_id,
+        ss.session_id,
+        u.id AS user_id,
+        u.code_id,
+        u.display_name,
+        u.study_group,
+        u.approval_status,
+        ss.start_date AS session_start_date,
+        ss.end_date AS session_end_date,
+        ss.total_days AS session_total_days,
+        r.day_number,
+        r.week_number,
+        r.wake_date,
+        r.shift_type,
+        r.bedtime,
+        r.attempt_sleep_time,
+        r.sol_minutes,
+        r.number_of_awakenings,
+        r.waso_minutes,
+        r.final_wake_time,
+        r.get_up_time,
+        r.sleep_after_final_wake_minutes,
+        r.early_wake,
+        r.tib_minutes,
+        r.tst_minutes,
+        r.sleep_efficiency,
+        r.sleep_quality,
+        r.morning_refreshment,
+        r.shift_sleepiness,
+        r.nap_count,
+        r.nap,
+        r.nap_minutes,
+        r.ot_done,
+        r.work_stress,
+        r.caffeine_cups,
+        r.last_caffeine_time,
+        r.sleep_medication,
+        r.phone_before_bed_minutes,
+        r.breathing_478,
+        r.breathing_478_time,
+        r.bedroom_adjustment_done,
+        r.created_at,
+        r.updated_at
+      ${sleepDiaryBaseQuery()}
+      INNER JOIN sleep_diary_records r ON r.session_id = ss.session_id
+      WHERE ${whereParts.join(' AND ')}
+      ORDER BY ${sort.sortBy} ${sort.sortOrder}, r.day_number ASC
+    `,
+    params
+  );
+
+  const items = rows.map((row) => ({
+    record_id: Number(row.record_id),
+    session_id: Number(row.session_id),
+    user_id: Number(row.user_id),
+    code_id: row.code_id,
+    display_name: row.display_name,
+    study_group: row.study_group == null ? null : Number(row.study_group),
+    approval_status: row.approval_status || null,
+    session_start_date: toDateOnly(row.session_start_date),
+    session_end_date: toDateOnly(row.session_end_date),
+    session_total_days: row.session_total_days == null ? null : Number(row.session_total_days),
+    day_number: Number(row.day_number),
+    week_number: Number(row.week_number),
+    wake_date: toDateOnly(row.wake_date),
+    shift_type: row.shift_type,
+    bedtime: toTimeHHmm(row.bedtime),
+    attempt_sleep_time: toTimeHHmm(row.attempt_sleep_time),
+    sol_minutes: Number(row.sol_minutes),
+    number_of_awakenings: Number(row.number_of_awakenings),
+    waso_minutes: Number(row.waso_minutes),
+    final_wake_time: toTimeHHmm(row.final_wake_time),
+    get_up_time: toTimeHHmm(row.get_up_time),
+    sleep_after_final_wake_minutes: Number(row.sleep_after_final_wake_minutes),
+    early_wake: Number(row.early_wake),
+    tib_minutes: Number(row.tib_minutes),
+    tst_minutes: Number(row.tst_minutes),
+    sleep_efficiency: row.sleep_efficiency == null ? null : Number(row.sleep_efficiency),
+    sleep_quality: Number(row.sleep_quality),
+    morning_refreshment: Number(row.morning_refreshment),
+    shift_sleepiness: Number(row.shift_sleepiness),
+    nap_count: Number(row.nap_count || 0),
+    nap: Number(row.nap || 0),
+    nap_minutes: Number(row.nap_minutes || 0),
+    ot_done: Number(row.ot_done || 0),
+    work_stress: Number(row.work_stress),
+    caffeine_cups: Number(row.caffeine_cups),
+    last_caffeine_time: toTimeHHmm(row.last_caffeine_time),
+    sleep_medication: Number(row.sleep_medication || 0),
+    phone_before_bed_minutes: Number(row.phone_before_bed_minutes),
+    breathing_478: Number(row.breathing_478 || 0),
+    breathing_478_time: toTimeHHmm(row.breathing_478_time),
+    bedroom_adjustment_done: Number(row.bedroom_adjustment_done || 0),
+    created_at: row.created_at || null,
+    updated_at: row.updated_at || null,
+  }));
+
+  return {
+    items,
+    columns: SLEEP_DIARY_RAW_EXPORT_COLUMNS,
   };
 }
 

@@ -9,8 +9,12 @@ export function requireUserExperimentalGroup(req, res, next) {
     return next(forbiddenError());
   }
 
-  if (Number(req.auth.studyGroup) !== 2) {
-    return next(new AppError(403, 'KNOWLEDGE_EXPERIMENTAL_ONLY', 'เฉพาะผู้ใช้กลุ่มทดลองเท่านั้นที่เข้าใช้งานส่วนความรู้ได้'));
+  const studyGroup = Number(req.auth.studyGroup);
+
+  if (studyGroup !== 1 && studyGroup !== 2) {
+    return next(
+      new AppError(403, 'KNOWLEDGE_ELIGIBLE_GROUP_ONLY', 'เฉพาะผู้ใช้กลุ่มนำร่องหรือกลุ่มทดลองเท่านั้นที่เข้าใช้งานส่วนความรู้ได้')
+    );
   }
 
   return next();
