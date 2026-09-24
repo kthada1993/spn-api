@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS admin_matching_pairs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  experimental_user_id BIGINT UNSIGNED NOT NULL,
+  control_user_id BIGINT UNSIGNED NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  confirmed_by_admin_id BIGINT UNSIGNED NULL,
+  confirmed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  cancelled_by_admin_id BIGINT UNSIGNED NULL,
+  cancelled_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_admin_matching_pair_unique (experimental_user_id, control_user_id),
+  KEY idx_admin_matching_pairs_active (is_active),
+  KEY idx_admin_matching_pairs_experimental (experimental_user_id),
+  KEY idx_admin_matching_pairs_control (control_user_id),
+  CONSTRAINT fk_admin_matching_pairs_experimental_user FOREIGN KEY (experimental_user_id) REFERENCES users(id),
+  CONSTRAINT fk_admin_matching_pairs_control_user FOREIGN KEY (control_user_id) REFERENCES users(id),
+  CONSTRAINT fk_admin_matching_pairs_confirmed_admin FOREIGN KEY (confirmed_by_admin_id) REFERENCES admins(id),
+  CONSTRAINT fk_admin_matching_pairs_cancelled_admin FOREIGN KEY (cancelled_by_admin_id) REFERENCES admins(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
