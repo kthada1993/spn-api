@@ -25,7 +25,7 @@ const LESSON_META = {
   },
   lesson3: {
     key: 'lesson3',
-    title: 'กิจกรรมที่ 3 Risk Reduction',
+    title: 'กิจกรรมที่ 3 Diaphragm Breathing',
     video_path: '/learn/lesson3/lesson3.mp4',
     pdf_path: '/learn/lesson3/lesson3.pdf',
   },
@@ -33,7 +33,7 @@ const LESSON_META = {
     key: 'lesson4',
     title: 'กิจกรรมที่ 4 Risk Reduction',
     video_path: '/learn/lesson4/lesson4.mp4',
-    pdf_path: '/learn/lesson4/lesson4.pdf',
+    pdf_path: 'https://drive.google.com/file/d/1KMdAHWowWsSObeSa1ou9U9UqsX5AhWQg/view?usp=drive_link',
   },
 };
 
@@ -42,9 +42,9 @@ const QUIZ_QUESTIONS = [
   { id: 2, answer: 'เมลาโทนิน' },
   { id: 3, answer: '90-110 นาที' },
   { id: 4, answer: 'REM Sleep' },
-  { id: 5, answer: 'ความเสี่ยงโรคหัวใจเพิ่มขึ้น' },
+  { id: 5, answer: 'ความจำดีขึ้น' },
   { id: 6, answer: '5-7 ชั่วโมง' },
-  { id: 7, answer: '25-28°C' },
+  { id: 7, answer: '16-20°C' },
   { id: 8, answer: 'ยับยั้งการหลั่งเมลาโทนิน ทำให้หลับยากขึ้น' },
   {
     id: 9,
