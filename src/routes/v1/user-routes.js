@@ -4,6 +4,7 @@ import { ok } from '../../utils/api-response.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireUserApproved } from '../../middleware/require-user-approved.js';
 import { requireUserExperimentalGroup } from '../../middleware/require-user-experimental-group.js';
+import { requireUserExperimentalOnlyGroup } from '../../middleware/require-user-experimental-only-group.js';
 import { requireUserScreeningPassed } from '../../middleware/require-user-screening-passed.js';
 import { requireUserPsqiPassed } from '../../middleware/require-user-psqi-passed.js';
 import { requireUser } from '../../middleware/require-role.js';
@@ -34,6 +35,8 @@ import {
   saveMyKnowledgeLessonPdfOpened,
   submitMyKnowledgeQuiz,
 } from '../../controllers/knowledge-controller.js';
+import { getMySatisfaction, submitMySatisfaction } from '../../controllers/satisfaction-controller.js';
+import { getMyContamination, submitMyContamination } from '../../controllers/contamination-controller.js';
 
 const router = Router();
 
@@ -206,6 +209,38 @@ router.post(
   requireUserApproved,
   requireUserExperimentalGroup,
   submitMyKnowledgeQuiz
+);
+
+router.get(
+  '/satisfaction',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserExperimentalOnlyGroup,
+  getMySatisfaction
+);
+router.post(
+  '/satisfaction',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  requireUserExperimentalOnlyGroup,
+  submitMySatisfaction
+);
+
+router.get(
+  '/contamination-screening',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  getMyContamination
+);
+router.post(
+  '/contamination-screening',
+  authenticate,
+  requireUser,
+  requireUserApproved,
+  submitMyContamination
 );
 
 export default router;

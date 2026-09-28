@@ -32,9 +32,17 @@ import {
   getAdminMonitoringLearningDetail,
   getAdminMonitoringParticipantOverview,
   listAdminMonitoringActionRequired,
-  exportAdminMonitoringPsqiRawExcel,
-  exportAdminMonitoringSleepDiaryRawExcel,
 } from '../../controllers/admin-monitoring-controller.js';
+import {
+  listAdminSatisfaction,
+  exportAdminSatisfactionExcel,
+  exportAdminSatisfactionCsv,
+} from '../../controllers/satisfaction-controller.js';
+import {
+  listAdminContamination,
+  exportAdminContaminationExcel,
+  exportAdminContaminationCsv,
+} from '../../controllers/contamination-controller.js';
 
 const router = Router();
 
@@ -65,10 +73,8 @@ router.delete('/settings/departments/:id', authenticate, requireAdmin, deleteAdm
 
 router.get('/monitoring/overview', authenticate, requireAdmin, getAdminMonitoringOverview);
 router.get('/monitoring/psqi', authenticate, requireAdmin, listAdminMonitoringPsqi);
-router.get('/monitoring/psqi/export-raw-excel', authenticate, requireAdmin, exportAdminMonitoringPsqiRawExcel);
 router.get('/monitoring/psqi/:userId', authenticate, requireAdmin, getAdminMonitoringPsqiDetail);
 router.get('/monitoring/sleep-diary', authenticate, requireAdmin, listAdminMonitoringSleepDiary);
-router.get('/monitoring/sleep-diary/export-raw-excel', authenticate, requireAdmin, exportAdminMonitoringSleepDiaryRawExcel);
 router.get('/monitoring/sleep-diary/:userId', authenticate, requireAdmin, getAdminMonitoringSleepDiaryDetail);
 router.get('/monitoring/smart-goal', authenticate, requireAdmin, listAdminMonitoringSmartGoal);
 router.get('/monitoring/smart-goal/:userId', authenticate, requireAdmin, getAdminMonitoringSmartGoalDetail);
@@ -76,5 +82,11 @@ router.get('/monitoring/learning', authenticate, requireAdmin, listAdminMonitori
 router.get('/monitoring/learning/:userId', authenticate, requireAdmin, getAdminMonitoringLearningDetail);
 router.get('/monitoring/participant/:userId', authenticate, requireAdmin, getAdminMonitoringParticipantOverview);
 router.get('/monitoring/action-required', authenticate, requireAdmin, listAdminMonitoringActionRequired);
+router.get('/satisfaction', authenticate, requireAdmin, listAdminSatisfaction);
+router.get('/satisfaction/export-excel', authenticate, requireAdmin, exportAdminSatisfactionExcel);
+router.get('/satisfaction/export-csv', authenticate, requireAdmin, exportAdminSatisfactionCsv);
+router.get('/contamination-screening', authenticate, requireAdmin, listAdminContamination);
+router.get('/contamination-screening/export-excel', authenticate, requireAdmin, exportAdminContaminationExcel);
+router.get('/contamination-screening/export-csv', authenticate, requireAdmin, exportAdminContaminationCsv);
 
 export default router;

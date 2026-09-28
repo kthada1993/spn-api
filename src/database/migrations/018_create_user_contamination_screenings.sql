@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS user_contamination_screenings (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  week1_assessment_date DATE NULL,
+  submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  q1_received_material TINYINT(1) NOT NULL,
+  q1_material_detail TEXT NULL,
+  q2_received_breathing TINYINT(1) NOT NULL,
+  q2_breathing_frequency VARCHAR(24) NULL,
+  q3_received_strategy TINYINT(1) NOT NULL,
+  q3_strategy_detail TEXT NULL,
+  q4_talked_with_experimental VARCHAR(24) NOT NULL,
+  part2_timeframe VARCHAR(24) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_user_contamination_screenings_user (user_id),
+  KEY idx_user_contamination_screenings_submitted_at (submitted_at),
+  CONSTRAINT fk_user_contamination_screenings_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
