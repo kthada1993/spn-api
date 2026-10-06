@@ -102,6 +102,11 @@ function parseUserId(input) {
   return userId;
 }
 
+function normalizeStudyGroupFilter(input) {
+  const value = Number(input);
+  return [1, 2, 3].includes(value) ? value : null;
+}
+
 function psqiLevelCode(score) {
   if (score == null) return 'UNKNOWN';
   if (score <= 5) return 'GOOD';
@@ -462,6 +467,7 @@ function trendLabel(code) {
 function psqiBaseQuery() {
   return `
     FROM users u
+    LEFT JOIN user_screenings s ON s.user_id = u.id
     LEFT JOIN user_assessments a1 ON a1.user_id = u.id AND a1.assessment_round = 1
     LEFT JOIN user_assessments a8 ON a8.user_id = u.id AND a8.assessment_round = 2
   `;
@@ -472,6 +478,7 @@ function psqiSelectFields() {
     u.id,
     u.code_id,
     u.display_name,
+    s.study_group,
     a1.assessment_date AS week1_date,
     a1.total_score AS week1_score,
     a1.component_1 AS week1_component_1,
@@ -509,6 +516,13 @@ function psqiSelectFields() {
 }
 
 function appendPsqiFilters(whereParts, params, filters = {}) {
+  const studyGroup = normalizeStudyGroupFilter(filters.studyGroup);
+
+  if (studyGroup != null) {
+    whereParts.push('s.study_group = ?');
+    params.push(studyGroup);
+  }
+
   const search = String(filters.search || '').trim();
   if (search) {
     whereParts.push('(u.code_id LIKE ? OR u.display_name LIKE ?)');
@@ -573,6 +587,7 @@ function transformPsqiRow(row) {
     user_id: row.id,
     code_id: row.code_id,
     display_name: row.display_name,
+    study_group: toNumberOrNull(row.study_group),
     week1_done: week1Score != null,
     week1_score: week1Score,
     week1_date: toDateOnly(row.week1_date),
@@ -897,6 +912,7 @@ export async function getMonitoringPsqiDetail(userIdInput) {
 function sleepDiaryBaseQuery() {
   return `
     FROM users u
+    LEFT JOIN user_screenings s ON s.user_id = u.id
     LEFT JOIN (
       SELECT s.user_id, s.id AS session_id, s.start_date, s.end_date, s.total_days
       FROM sleep_diary_sessions s
@@ -928,6 +944,7 @@ function sleepDiarySelectFields() {
     u.id,
     u.code_id,
     u.display_name,
+    s.study_group,
     ss.session_id,
     ss.start_date,
     ss.end_date,
@@ -952,6 +969,13 @@ function sleepDiarySelectFields() {
 }
 
 function appendSleepDiaryFilters(whereParts, params, filters = {}) {
+  const studyGroup = normalizeStudyGroupFilter(filters.studyGroup);
+
+  if (studyGroup != null) {
+    whereParts.push('s.study_group = ?');
+    params.push(studyGroup);
+  }
+
   const search = String(filters.search || '').trim();
   if (search) {
     whereParts.push('(u.code_id LIKE ? OR u.display_name LIKE ?)');
@@ -1022,6 +1046,7 @@ function transformSleepDiaryRow(row) {
     user_id: row.id,
     code_id: row.code_id,
     display_name: row.display_name,
+    study_group: toNumberOrNull(row.study_group),
     week1: `${Math.min(7, week1Completed)} / 7`,
     week2: `${Math.min(7, week2Completed)} / 7`,
     completed_days: completedDays,
@@ -1505,15 +1530,29 @@ export async function listMonitoringActionRequired(filters = {}) {
 
 export async function listMonitoringLearning(filters = {}) {
   const paging = normalizePagination(filters);
+  const studyGroup = normalizeStudyGroupFilter(filters.studyGroup);
   const search = String(filters.search || '').trim();
-  const searchWhere = search ? 'WHERE (u.code_id LIKE ? OR u.display_name LIKE ?)' : '';
-  const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+  const whereParts = ['1=1'];
+  const searchParams = [];
+
+  if (studyGroup != null) {
+    whereParts.push('s.study_group = ?');
+    searchParams.push(studyGroup);
+  }
+
+  if (search) {
+    whereParts.push('(u.code_id LIKE ? OR u.display_name LIKE ?)');
+    searchParams.push(`%${search}%`, `%${search}%`);
+  }
+
+  const whereClause = `WHERE ${whereParts.join(' AND ')}`;
 
   const users = await query(
     `
-      SELECT u.id AS user_id, u.code_id, u.display_name
+      SELECT u.id AS user_id, u.code_id, u.display_name, s.study_group
       FROM users u
-      ${searchWhere}
+      LEFT JOIN user_screenings s ON s.user_id = u.id
+      ${whereClause}
       ORDER BY u.id DESC
     `,
     searchParams
@@ -1536,6 +1575,7 @@ export async function listMonitoringLearning(filters = {}) {
       user_id: user.user_id,
       code_id: user.code_id,
       display_name: user.display_name,
+      study_group: toNumberOrNull(user.study_group),
       intro_percent: progress.intro_percent,
       intro_unlocked: progress.intro_unlocked,
       completed_lessons: progress.completed_lessons,
@@ -1585,7 +1625,7 @@ export async function listMonitoringLearning(filters = {}) {
     items,
     summary: {
       participants_total: transformed.length,
-      intro_unlocked,
+      intro_unlocked: introUnlocked,
       intro_pending: transformed.length - introUnlocked,
       in_progress: inProgress,
       completed: completedLearners,
@@ -1682,9 +1722,22 @@ export async function getMonitoringLearningDetail(userIdInput) {
 
 export async function listMonitoringSmartGoal(filters = {}) {
   const paging = normalizePagination(filters);
+  const studyGroup = normalizeStudyGroupFilter(filters.studyGroup);
   const search = String(filters.search || '').trim();
-  const searchWhere = search ? 'WHERE (u.code_id LIKE ? OR u.display_name LIKE ?)' : '';
-  const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+  const whereParts = ['1=1'];
+  const searchParams = [];
+
+  if (studyGroup != null) {
+    whereParts.push('us.study_group = ?');
+    searchParams.push(studyGroup);
+  }
+
+  if (search) {
+    whereParts.push('(u.code_id LIKE ? OR u.display_name LIKE ?)');
+    searchParams.push(`%${search}%`, `%${search}%`);
+  }
+
+  const whereClause = `WHERE ${whereParts.join(' AND ')}`;
 
   const rows = await query(
     `
@@ -1692,6 +1745,7 @@ export async function listMonitoringSmartGoal(filters = {}) {
         u.id AS user_id,
         u.code_id,
         u.display_name,
+        us.study_group,
         s.id AS session_id,
         COALESCE(s.total_days, 14) AS total_days,
         g.id AS smart_goal_id,
@@ -1703,6 +1757,7 @@ export async function listMonitoringSmartGoal(filters = {}) {
         g.bedroom_adjustment_plan,
         COALESCE(d.completed_days, 0) AS completed_days
       FROM users u
+      LEFT JOIN user_screenings us ON us.user_id = u.id
       LEFT JOIN (
         SELECT s1.*
         FROM sleep_diary_sessions s1
@@ -1718,7 +1773,7 @@ export async function listMonitoringSmartGoal(filters = {}) {
         FROM sleep_diary_records
         GROUP BY session_id
       ) d ON d.session_id = s.id
-      ${searchWhere}
+      ${whereClause}
       ORDER BY u.id DESC
     `,
     searchParams
@@ -1769,6 +1824,7 @@ export async function listMonitoringSmartGoal(filters = {}) {
       user_id: row.user_id,
       code_id: row.code_id,
       display_name: row.display_name,
+      study_group: toNumberOrNull(row.study_group),
       smart_goal_configured: summary.configured,
       completed_days: Number(row.completed_days || 0),
       total_days: Number(row.total_days || 14),

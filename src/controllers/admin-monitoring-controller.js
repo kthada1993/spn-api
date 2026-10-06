@@ -34,6 +34,7 @@ function parseFilters(query = {}) {
     dateTo: query.dateTo,
     shiftType: query.shiftType,
     learningStatus: query.learningStatus,
+    studyGroup: query.studyGroup,
   };
 }
 
